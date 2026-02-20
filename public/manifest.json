@@ -1,0 +1,25 @@
+{
+  "name": "Open Heavens Church",
+  "short_name": "Open Heavens",
+  "description": "Uma comunidade de fé em Coimbra, unidos pelo amor de Cristo.",
+  "theme_color": "#C0DF16",
+  "background_color": "#242121",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "https://cdn.weserve.one/church-app/default/4b9a2c45-4dae-4778-8945-a692a12d7f8a.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.weserve.one/church-app/default/b8aae5e5-719b-4a16-947f-a281f63ed16d.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
