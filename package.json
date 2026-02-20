@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "cp config.js styles.css public/ 2>/dev/null || true",
-    "build": "npm run prebuild && vite build",
+    "build": "pnpm run prebuild && vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
