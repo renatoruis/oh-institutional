@@ -1,4 +1,31 @@
 /**
+ * Updates document meta tags for SEO (title, description, Open Graph).
+ * Values are escaped with escapeHtml to prevent XSS.
+ * @param {{ title?: string, description?: string, ogTitle?: string, ogDescription?: string, ogImage?: string }}
+ */
+export function updateMetaTags({ title, description, ogTitle, ogDescription, ogImage }) {
+  if (title != null && title !== '') {
+    document.title = escapeHtml(String(title));
+  }
+  const setMeta = (attrName, attrValue, content) => {
+    if (content == null || content === '') return;
+    const escaped = escapeHtml(String(content));
+    const selector = `meta[${attrName}="${attrValue}"]`;
+    let el = document.querySelector(selector);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute(attrName, attrValue);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', escaped);
+  };
+  if (description != null && description !== '') setMeta('name', 'description', description);
+  if (ogTitle != null && ogTitle !== '') setMeta('property', 'og:title', ogTitle);
+  if (ogDescription != null && ogDescription !== '') setMeta('property', 'og:description', ogDescription);
+  if (ogImage != null && ogImage !== '') setMeta('property', 'og:image', ogImage);
+}
+
+/**
  * Escapes HTML special chars to prevent XSS in user content.
  */
 export function escapeHtml(s) {

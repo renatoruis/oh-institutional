@@ -4,6 +4,7 @@
 import { getNotices } from '../api/index.js';
 import { navigate } from '../router.js';
 import { escapeHtml } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import { i18n, t } from '../i18n.js';
 
 const LIMIT = 20;
@@ -90,11 +91,11 @@ export async function render(params = {}) {
       ${paginationHtml}
     </div>
   </div>
-  <div id="aviso-modal" class="modal-overlay" aria-hidden="true">
+  <div id="aviso-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="aviso-modal-title">
     <div class="modal-content p-6 sm:p-8" onclick="event.stopPropagation()">
       <div class="flex items-start justify-between mb-4">
         <h2 id="aviso-modal-title" class="text-xl font-extrabold text-dark pr-4"></h2>
-        <button id="aviso-modal-close" class="shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
+        <button id="aviso-modal-close" class="shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition" aria-label="${i18n('close')}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
@@ -121,40 +122,79 @@ export function mount(data) {
   const titleEl = document.getElementById('aviso-modal-title');
   const metaEl = document.getElementById('aviso-modal-meta');
   const bodyEl = document.getElementById('aviso-modal-body');
+  const closeBtn = document.getElementById('aviso-modal-close');
 
-  function openModal(idx) {
+  let modalOpenerEl = null;
+  let modalKeydownHandler = null;
+
+  function getModalFocusables() {
+    if (!modal) return [];
+    const els = modal.querySelectorAll('a[href], button:not([disabled])');
+    return Array.from(els).filter(el => el.offsetParent !== null);
+  }
+
+  function openModal(idx, triggerEl) {
     const n = sorted[idx];
     if (!n) return;
+    modalOpenerEl = triggerEl || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const title = t(n.title_i18n) || 'Aviso';
     const body = t(n.body_i18n) || '';
     titleEl.textContent = title;
     metaEl.innerHTML = '';
     if (n.pinned) metaEl.innerHTML += `<span class="badge badge-pinned">${i18n('pinned')}</span>`;
     if (n.notice_type && n.notice_type !== 'general') metaEl.innerHTML += `<span class="badge badge-blue">${escapeHtml(n.notice_type)}</span>`;
-    bodyEl.innerHTML = body || `<p class="text-gray-400">${i18n('no_extra_content')}</p>`;
+    bodyEl.innerHTML = body ? sanitizeHtml(body) : `<p class="text-gray-400">${i18n('no_extra_content')}</p>`;
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => (closeBtn || getModalFocusables()[0])?.focus());
+    modalKeydownHandler = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const list = getModalFocusables();
+      if (!list.length) return;
+      const focusIdx = list.indexOf(document.activeElement);
+      if (e.shiftKey) {
+        if (focusIdx <= 0) {
+          e.preventDefault();
+          list[list.length - 1].focus();
+        }
+      } else {
+        if (focusIdx < 0 || focusIdx >= list.length - 1) {
+          e.preventDefault();
+          list[0].focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', modalKeydownHandler);
   }
 
   function closeModal() {
     modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    if (modalKeydownHandler) {
+      document.removeEventListener('keydown', modalKeydownHandler);
+      modalKeydownHandler = null;
+    }
+    if (modalOpenerEl instanceof HTMLElement) {
+      modalOpenerEl.focus();
+      modalOpenerEl = null;
+    }
   }
 
   document.querySelectorAll('.aviso-card').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
       const idx = parseInt(btn.dataset.avisoIdx, 10);
-      openModal(idx);
+      openModal(idx, e.currentTarget);
     });
   });
 
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-  document.getElementById('aviso-modal-close')?.addEventListener('click', closeModal);
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', esc); }
-  });
+  closeBtn?.addEventListener('click', closeModal);
 
   document.querySelectorAll('.page-btn[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {

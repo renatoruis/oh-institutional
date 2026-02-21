@@ -120,11 +120,17 @@ export async function render() {
     </div>`;
 
   const blogGrid = blogPosts.length
-    ? blogPosts.map(blogToCard).join('')
+    ? blogPosts.map((p, i) => {
+        const card = blogToCard(p);
+        return i === 0 ? card : `<div class="hidden sm:block">${card}</div>`;
+      }).join('')
     : `<div class="col-span-full text-center py-8 text-gray-500">${i18n('coming_soon')}</div>`;
 
   const eventsGrid = events.length
-    ? events.map(eventToCard).join('')
+    ? events.map((e, i) => {
+        const card = eventToCard(e);
+        return i === 0 ? card : `<div class="hidden sm:block">${card}</div>`;
+      }).join('')
     : `<div class="col-span-full text-center py-8 text-gray-500">${i18n('coming_soon')}</div>`;
 
   const html = `

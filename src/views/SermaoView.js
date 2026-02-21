@@ -3,7 +3,8 @@
  *  
  */
 import { getSermon, getRelatedSermons, postSermonView } from '../api/index.js';
-import { escapeHtml, formatDate, getYouTubeId, formatDateShort } from '../utils.js';
+import { escapeHtml, formatDate, getYouTubeId, formatDateShort, updateMetaTags, truncate } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import { t, i18n } from '../i18n.js';
 import { EmptyState } from '../components/index.js';
 
@@ -72,7 +73,14 @@ export function render(params) {
     const pdfUrl = s.pdf_url || '';
     const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (s.image_url || s.thumbnail_url || '');
 
-    document.title = `${escapeHtml(title)} | Open Heavens Church`;
+    const metaDesc = truncate((desc || '').replace(/<[^>]+>/g, '').trim(), 160);
+    updateMetaTags({
+      title: `${title} | Open Heavens Church`,
+      description: metaDesc || undefined,
+      ogTitle: `${title} | Open Heavens Church`,
+      ogDescription: metaDesc || undefined,
+      ogImage: thumbUrl || undefined,
+    });
 
     const mainCol = wrap.querySelector('.grid > div:first-child');
     mainCol.innerHTML = `
@@ -92,7 +100,7 @@ export function render(params) {
           ${s.views != null ? `<span>· ${s.views} ${i18n('views_label')}</span>` : ''}
         </div>
         ${tags.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${tags.map((tg) => `<span class="badge badge-dark">${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
-        ${desc ? `<div class="rich-content mt-6 pt-6 border-t border-gray-200">${desc}</div>` : ''}
+        ${desc ? `<div class="rich-content mt-6 pt-6 border-t border-gray-200">${sanitizeHtml(desc)}</div>` : ''}
         ${pdfUrl ? `<div class="mt-6 pt-6 border-t border-gray-200">
           <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener" class="btn-outline">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

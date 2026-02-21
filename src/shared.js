@@ -6,9 +6,9 @@
 import { t, i18n, applyI18n, getLang, setLang } from './i18n.js';
 import { getChurch } from './api/index.js';
 import { fetchAPI, API_BASE } from './api/client.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, updateMetaTags } from './utils.js';
 
-export { t, i18n, applyI18n, getLang, setLang, escapeHtml, getChurch, fetchAPI, API_BASE };
+export { t, i18n, applyI18n, getLang, setLang, escapeHtml, updateMetaTags, getChurch, fetchAPI, API_BASE };
 export { renderNav, updateNavActive, closeNavDrawer, renderFooter, updateFooterText, renderScrollTop, renderPushBanner, setFavicon, showToast };
 export { getYouTubeId, initHeroParallax, formatDate, formatDateShort, formatTime, getUrlParam, truncate };
 export { skeleton, cardSkeleton, repeatSkeleton };
@@ -104,9 +104,20 @@ const NAV_LINKS = [
 
 /** @type {(() => void) | null} */
 let _onLangChangeTrigger = null;
+/** @type {HTMLElement | null} - element to restore focus when drawer closes */
+let _drawerOpenerEl = null;
+/** @type {(e: KeyboardEvent) => void} */
+let _drawerFocusTrap = null;
 
 export function setOnLangChangeTrigger(fn) {
   _onLangChangeTrigger = fn;
+}
+
+function getDrawerFocusables() {
+  const drawer = document.getElementById('nav-drawer');
+  if (!drawer) return [];
+  const els = drawer.querySelectorAll('a[href], button:not([disabled])');
+  return Array.from(els).filter(el => el.offsetParent !== null);
 }
 
 function closeNavDrawer() {
@@ -115,14 +126,47 @@ function closeNavDrawer() {
   if (overlay) overlay.classList.remove('active');
   if (drawer) drawer.classList.remove('open');
   document.body.classList.remove('nav-drawer-open');
+  if (_drawerFocusTrap) {
+    document.removeEventListener('keydown', _drawerFocusTrap);
+    _drawerFocusTrap = null;
+  }
+  if (_drawerOpenerEl) {
+    _drawerOpenerEl.focus();
+    _drawerOpenerEl = null;
+  }
 }
 
 function openNavDrawer() {
+  _drawerOpenerEl = document.activeElement instanceof HTMLElement ? document.activeElement : document.getElementById('nav-toggle');
   const overlay = document.getElementById('nav-drawer-overlay');
   const drawer = document.getElementById('nav-drawer');
   if (overlay) overlay.classList.add('active');
   if (drawer) drawer.classList.add('open');
   document.body.classList.add('nav-drawer-open');
+  const focusables = getDrawerFocusables();
+  const first = focusables[0];
+  if (first) {
+    requestAnimationFrame(() => first.focus());
+  }
+  _drawerFocusTrap = (e) => {
+    if (e.key !== 'Tab') return;
+    if (!drawer?.classList.contains('open')) return;
+    const list = getDrawerFocusables();
+    if (!list.length) return;
+    const idx = list.indexOf(document.activeElement);
+    if (e.shiftKey) {
+      if (idx <= 0) {
+        e.preventDefault();
+        list[list.length - 1].focus();
+      }
+    } else {
+      if (idx < 0 || idx >= list.length - 1) {
+        e.preventDefault();
+        list[0].focus();
+      }
+    }
+  };
+  document.addEventListener('keydown', _drawerFocusTrap);
 }
 
 function renderNav(activePage) {
@@ -161,7 +205,7 @@ function renderNav(activePage) {
         <a href="/" class="flex items-center shrink-0" aria-label="Open Heavens - ${t(NAV_LINKS[0]?.label || { pt: 'Início', en: 'Home' })}">
           <img id="nav-drawer-logo" src="https://cdn.weserve.one/church-app/default/4b9a2c45-4dae-4778-8945-a692a12d7f8a.png" alt="Open Heavens" class="h-10 w-auto object-contain">
         </a>
-        <button id="nav-drawer-close" class="p-2 -mr-2 text-white/80 hover:text-primary transition" aria-label="${i18n('close')}">
+        <button id="nav-drawer-close" class="p-2 -mr-2 text-white/80 hover:text-primary transition" aria-label="${i18n('close')}" data-i18n-aria-label="close">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
@@ -291,13 +335,13 @@ function renderFooter() {
 
     const contact = document.getElementById('footer-contact');
     contact.innerHTML = '';
-    if (c.phone) contact.innerHTML += `<p><a href="tel:${c.phone.replace(/\s/g, '')}" class="hover:text-primary transition">${c.phone}</a></p>`;
-    if (c.email) contact.innerHTML += `<p><a href="mailto:${c.email}" class="hover:text-primary transition">${c.email}</a></p>`;
+    if (c.phone) contact.innerHTML += `<p><a href="tel:${escapeHtml(c.phone.replace(/\s/g, ''))}" class="hover:text-primary transition">${escapeHtml(c.phone)}</a></p>`;
+    if (c.email) contact.innerHTML += `<p><a href="mailto:${escapeHtml(c.email)}" class="hover:text-primary transition">${escapeHtml(c.email)}</a></p>`;
     if (c.address) contact.innerHTML += `<p>${escapeHtml(c.address)}</p>`;
 
     const times = document.getElementById('footer-times');
     if (c.service_times?.length) {
-      times.innerHTML = c.service_times.map(s => `<p><strong class="text-white/80">${s.time}</strong> — ${s.label}</p>`).join('');
+      times.innerHTML = c.service_times.map(s => `<p><strong class="text-white/80">${escapeHtml(s.time)}</strong> — ${escapeHtml(s.label)}</p>`).join('');
     }
 
     const social = document.getElementById('footer-social');
@@ -307,9 +351,10 @@ function renderFooter() {
       facebook: '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
     };
     if (c.social_links?.length) {
-      social.innerHTML = c.social_links.map(s =>
-        `<a href="${s.url}" target="_blank" rel="noopener" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-primary hover:text-dark transition" title="${s.platform}">${icons[s.platform] || s.platform}</a>`
-      ).join('');
+      social.innerHTML = c.social_links.map(s => {
+        const safeUrl = /^https?:\/\//i.test(s.url) ? s.url : '#';
+        return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-primary hover:text-dark transition" title="${escapeHtml(s.platform || '')}">${icons[s.platform] || escapeHtml(s.platform || '')}</a>`;
+      }).join('');
     }
   });
 }
@@ -318,6 +363,8 @@ function renderScrollTop() {
   const btn = document.createElement('button');
   btn.id = 'scroll-top';
   btn.className = 'fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-dark text-primary shadow-lg flex items-center justify-center opacity-0 translate-y-4 pointer-events-none transition-all duration-300';
+  btn.setAttribute('aria-label', i18n('scroll_top_label'));
+  btn.setAttribute('data-i18n-aria-label', 'scroll_top_label');
   btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>';
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   document.body.appendChild(btn);

@@ -2,7 +2,8 @@
  * EventoView – detalhe do evento por id
  */
 import { getEvent, API_BASE } from '../api/index.js';
-import { escapeHtml } from '../utils.js';
+import { escapeHtml, updateMetaTags, truncate } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 
 const MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
@@ -67,7 +68,14 @@ export function render(params) {
     const endTimeStr = endD ? endD.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '';
     const tags = e.tags || [];
 
-    document.title = `${title} | Open Heavens Church`;
+    const metaDesc = truncate((desc || '').replace(/<[^>]+>/g, '').trim(), 160);
+    updateMetaTags({
+      title: `${title} | Open Heavens Church`,
+      description: metaDesc || undefined,
+      ogTitle: `${title} | Open Heavens Church`,
+      ogDescription: metaDesc || undefined,
+      ogImage: img || undefined,
+    });
 
     container.innerHTML = `
       ${img ? `<div class="relative rounded-2xl overflow-hidden mb-8 aspect-[21/9]">
@@ -92,7 +100,7 @@ export function render(params) {
 
         ${tags.length ? `<div class="flex flex-wrap gap-1.5 mb-6">${tags.map((tg) => `<span class="badge badge-amber">${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
 
-        ${desc ? `<div class="rich-content rounded-2xl bg-white border border-gray-200 p-6 sm:p-8 mb-6">${desc}</div>` : ''}
+        ${desc ? `<div class="rich-content rounded-2xl bg-white border border-gray-200 p-6 sm:p-8 mb-6">${sanitizeHtml(desc)}</div>` : ''}
 
         <div class="flex flex-wrap gap-3">
           <a href="${API_BASE}/api/events/${encodeURIComponent(id)}/ical" class="btn-primary" download>

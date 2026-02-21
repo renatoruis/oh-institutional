@@ -194,5 +194,10 @@ export function applyI18n() {
     const val = i18n(key);
     if (val && val !== key) el.title = val;
   });
+  root.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    const key = el.getAttribute('data-i18n-aria-label');
+    const val = i18n(key);
+    if (val && val !== key) el.setAttribute('aria-label', val);
+  });
   document.documentElement.lang = _lang;
 }

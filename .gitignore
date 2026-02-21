@@ -1,11 +1,33 @@
+# Dependencies
 node_modules
+
+# Build output
 dist
+build
+
+# Environment
 .env
 .env.local
 .env.*.local
-*.log
+
+# OS
 .DS_Store
 
-# Playwright
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE / Editor
+.cursor
+.vscode
+
+# Test / Coverage
+coverage
+.nyc_output
 playwright-report/
 test-results/
+
+# Artifacts
+*.tsbuildinfo
+.cache

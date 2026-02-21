@@ -163,14 +163,14 @@ export function bindLinks() {
       try {
         const url = new URL(href, window.location.origin);
         if (url.origin !== window.location.origin) return;
+
+        // Links same-origin: tratar como SPA navigation (preventDefault evita reload)
+        const pathname = url.pathname;
+        e.preventDefault();
+        navigate(pathname);
       } catch {
         return;
       }
-
-      // Links same-origin: tratar como SPA navigation (preventDefault evita reload)
-      const pathname = url.pathname;
-      e.preventDefault();
-      navigate(pathname);
     },
     { capture: true }
   );

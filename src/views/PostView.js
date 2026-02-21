@@ -3,7 +3,8 @@
  * getBlogPost(slug), layout: imagem, título, data, categoria, rich-content, back link.
  */
 import { getBlogPost } from '../api/index.js';
-import { escapeHtml, formatDate } from '../utils.js';
+import { escapeHtml, formatDate, updateMetaTags, truncate } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import { t, i18n, getLang } from '../i18n.js';
 import { EmptyState } from '../components/index.js';
 
@@ -58,7 +59,14 @@ export function render(params) {
     const cat = p.category?.name || '';
     const tags = p.tags || [];
 
-    document.title = `${escapeHtml(title)} | Open Heavens Church`;
+    const desc = truncate((content.replace(/<[^>]+>/g, '').trim()), 160);
+    updateMetaTags({
+      title: `${title} | Open Heavens Church`,
+      description: desc || undefined,
+      ogTitle: `${title} | Open Heavens Church`,
+      ogDescription: desc || undefined,
+      ogImage: img || undefined,
+    });
 
     container.innerHTML = `
       ${img ? `<div class="relative rounded-2xl overflow-hidden mb-8 aspect-[21/9]">
@@ -76,7 +84,7 @@ export function render(params) {
           </div>
           ${tags.length ? `<div class="flex flex-wrap gap-1.5 mt-3">${tags.map((tg) => `<span class="badge badge-dark">${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
         </div>
-        <div class="rich-content">${content}</div>
+        <div class="rich-content">${sanitizeHtml(content)}</div>
       </article>
     `;
   })();

@@ -155,9 +155,15 @@ export function render() {
     feedbackEl.className = '';
 
     try {
-      await postContact(body);
-      feedbackEl.innerHTML = FormFeedback({ type: 'success', message: i18n('message_sent') || 'Mensagem enviada com sucesso! Entraremos em contacto em breve.' });
-      wrapper.querySelector('#contact-form')?.reset();
+      const result = await postContact(body);
+      const hasError = result === null || (typeof result === 'object' && result?.error);
+      if (hasError) {
+        const errMsg = (typeof result === 'object' && result?.error) ? String(result.error) : (i18n('send_error') || 'Erro ao enviar.');
+        feedbackEl.innerHTML = FormFeedback({ type: 'error', message: errMsg });
+      } else {
+        feedbackEl.innerHTML = FormFeedback({ type: 'success', message: i18n('message_sent') || 'Mensagem enviada com sucesso! Entraremos em contacto em breve.' });
+        wrapper.querySelector('#contact-form')?.reset();
+      }
     } catch (err) {
       feedbackEl.innerHTML = FormFeedback({ type: 'error', message: err.message || i18n('send_error') || 'Erro ao enviar.' });
     }

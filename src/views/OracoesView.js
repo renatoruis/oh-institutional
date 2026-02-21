@@ -189,14 +189,20 @@ export function render() {
     feedbackEl.className = '';
 
     try {
-      await postPrayer(body);
-      feedbackEl.innerHTML = FormFeedback({ type: 'success', message: i18n('request_sent') || 'Pedido enviado com sucesso! Obrigado.' });
-      feedbackEl.classList.remove('hidden');
-      wrapper.querySelector('#prayer-form')?.reset();
-      isPublic = true;
-      wrapper.querySelector('#pf-toggle')?.classList.add('active');
-      wrapper.querySelector('#pf-toggle-label').textContent = i18n('public_request');
-      loadPrayers();
+      const result = await postPrayer(body);
+      const hasError = result === null || (typeof result === 'object' && result?.error);
+      if (hasError) {
+        const errMsg = (typeof result === 'object' && result?.error) ? String(result.error) : (i18n('send_error') || 'Erro ao enviar.');
+        feedbackEl.innerHTML = FormFeedback({ type: 'error', message: errMsg });
+      } else {
+        feedbackEl.innerHTML = FormFeedback({ type: 'success', message: i18n('request_sent') || 'Pedido enviado com sucesso! Obrigado.' });
+        feedbackEl.classList.remove('hidden');
+        wrapper.querySelector('#prayer-form')?.reset();
+        isPublic = true;
+        wrapper.querySelector('#pf-toggle')?.classList.add('active');
+        wrapper.querySelector('#pf-toggle-label').textContent = i18n('public_request');
+        loadPrayers();
+      }
     } catch (err) {
       feedbackEl.innerHTML = FormFeedback({ type: 'error', message: err.message || i18n('send_error') || 'Erro ao enviar.' });
     }

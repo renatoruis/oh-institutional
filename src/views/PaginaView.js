@@ -3,7 +3,8 @@
  * Renderiza rich-content, document.title
  */
 import { getPage } from '../api/index.js';
-import { escapeHtml } from '../utils.js';
+import { escapeHtml, updateMetaTags, truncate } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import { i18n, t } from '../i18n.js';
 
 export async function render(params) {
@@ -38,8 +39,16 @@ export async function render(params) {
   const ctaUrl = p.cta_url || '';
   const ctaStyle = p.cta_style || 'primary';
 
-  document.title = title ? `${title} | Open Heavens Church` : 'Open Heavens Church';
-  if (p.meta_title_i18n) document.title = t(p.meta_title_i18n);
+  const metaDesc = truncate((content || '').replace(/<[^>]+>/g, '').trim(), 160);
+  const metaTitle = title ? `${title} | Open Heavens Church` : 'Open Heavens Church';
+  const finalTitle = p.meta_title_i18n ? t(p.meta_title_i18n) : metaTitle;
+  updateMetaTags({
+    title: finalTitle,
+    description: metaDesc || undefined,
+    ogTitle: finalTitle,
+    ogDescription: metaDesc || undefined,
+    ogImage: img || undefined,
+  });
 
   return `
   <div class="pt-24 pb-16">
@@ -50,7 +59,7 @@ export async function render(params) {
       </div>` : ''}
       <div class="fade-in">
         <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-dark mb-6">${escapeHtml(title)}</h1>
-        <div class="rich-content">${content}</div>
+        <div class="rich-content">${sanitizeHtml(content)}</div>
         ${ctaLabel && ctaUrl ? `<div class="mt-8">
           <a href="${escapeHtml(ctaUrl)}" class="${ctaStyle === 'outline' ? 'btn-outline' : 'btn-primary'}">${escapeHtml(ctaLabel)}</a>
         </div>` : ''}

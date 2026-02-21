@@ -4,6 +4,7 @@
  */
 import { fetchAPI } from '../api/client.js';
 import { escapeHtml } from '../utils.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 import { i18n } from '../i18n.js';
 
 const FONT_SIZE_KEY = 'oh_bible_fs';
@@ -317,7 +318,7 @@ function initBibleReader() {
         return `<p class="bible-verse"><span class="verse-num">${num}.</span> ${text}</p>`;
       }).join('');
     } else if (data?.content || data?.text) {
-      readingContent.innerHTML = data.content || data.text;
+      readingContent.innerHTML = sanitizeHtml(data.content || data.text);
     } else {
       readingContent.innerHTML = `<p class="text-gray-400">${i18n('content_unavailable')}</p>`;
     }
